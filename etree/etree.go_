@@ -1,0 +1,108 @@
+package etree
+import(
+  //"github.com/zlang/lex"
+)
+
+type ETree struct {
+	formule []string
+	index   int
+}
+
+func NewETree(f string) *ETree {
+	e := &ETree{index: 0}
+	for x := 0; x < len([]rune(f)); x = x + 1 {
+		e.formule = append(e.formule, string([]rune(f)[x]))
+	}
+	return e
+}
+
+func (e *ETree) Eval() string{
+  e.index=0
+  return e.expression(0)
+}
+
+func (e *ETree) next() {
+	e.index = e.index + 1
+}
+
+func (e *ETree) isNotLast() bool {
+	return e.index+1 < len(e.formule)
+}
+
+func (e *ETree) getLit() string {
+	return e.formule[e.index]
+}
+
+func (e *ETree) getBP() int {
+	s := e.getLit()
+	p := 0
+	if s == "+" || s == "-" {
+		p = 10
+	}
+	if s == "*" || s == "/" {
+		p = 20
+	}
+	if s == "^" {
+		p = 30
+	}
+	if s == "%" {
+		p = 40
+	}
+	return p
+}
+
+func (e *ETree) nud() string {
+
+	if e.getLit() == "(" {
+    l:=0
+    s:=""
+    e.next()
+		for e.getLit() != ")" || l!=0 {
+      if e.getLit() == "(" {l=l+1}
+      if e.getLit() == ")" {l=l-1}
+    s=s+e.getLit()
+    e.next()
+    }
+
+    return "(" + NewETree(s).Eval() + ")"
+	}
+
+
+	if e.getLit() == "-" {
+		e.next()
+		return "'-" + e.getLit() + "'"
+	}
+	if e.getLit() == "+" {
+		e.next()
+		return "'" + e.getLit() + "'"
+	}
+	r := "'" + e.getLit() + "'"
+	return r
+}
+
+
+func (e *ETree) led(left string) string {
+
+  o := e.getBP()
+	l := e.getLit()
+	e.next()
+
+	if l == "^" {
+		return "[" + left + " " + l + " " + e.expression(o-1) + "]"
+	}
+	return "[" + left + " " + l + " " + e.expression(o) + "]"
+
+}
+
+func (e *ETree) expression(v int) string {
+	left := e.nud()
+
+	e.next()
+	for e.isNotLast() && v < e.getBP() {
+		left = e.led(left)
+		e.next()
+	}
+
+	return left
+
+}
