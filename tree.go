@@ -8,7 +8,7 @@ import(
 
 
 func main(){
-  s:="-A+B*(C+(D-12)/F)^G^H "
+  s:="-A+B*(C+(D-12)/F)^G^H"
 
   lex:=lex.NewLex(s)
   toks:=lex.ReadToks()

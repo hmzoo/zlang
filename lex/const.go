@@ -4,6 +4,7 @@ package lex
 const (
 	ILLEGAL = "ILLEGAL"
 	EOF     = "EOF"
+	UNKNOWN     = "UNKNOWN"
 
 	// IDENTIFIER + LITERALS
 	IDENT  = "IDENT"
@@ -36,6 +37,7 @@ const (
 	//delimiters
   NL = "NL"
   QUOTE   = "\""
+	PIPE   = "|"
 	COMMA   = ","
   SEMICOLON   = ";"
   LPARENT = "("

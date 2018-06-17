@@ -1,0 +1,244 @@
+package vtree
+
+import (
+	"fmt"
+)
+
+type Node struct {
+	label    string
+	bp       int
+	left     *Node
+	right    *Node
+	parent   *Node
+	next     *Node
+	previous *Node
+  current *Node
+}
+
+var CURNODE *Node
+
+func NewNode(l string) *Node {
+	return &Node{label: l, bp: 0}
+}
+
+func (n *Node) GetLabel() string {
+	return n.label
+}
+
+func (n *Node) SetBP(bp int) {
+	n.bp = bp
+}
+
+func (n *Node) GetBP() int {
+	return n.bp
+}
+
+func (n *Node) IsRight() bool {
+	return n.parent != nil && n.parent.GetRight() == n
+}
+
+func (n *Node) IsLeft() bool {
+	return n.parent != nil && n.parent.GetLeft() == n
+}
+
+// HORIZONTAL RANKING
+func (n *Node) NextNode(l string) *Node {
+	nn := &Node{label: l, bp: 0}
+	n.next = nn
+	nn.previous = n
+	return n
+}
+func (n *Node) GetNext() *Node {
+	return n.next
+}
+
+func (n *Node) GetPrevious() *Node {
+	return n.previous
+}
+
+func (n *Node) GetFirst() *Node {
+	if n.previous != nil {
+		return n.previous.GetFirst()
+	}
+	return n
+}
+
+func (n *Node) GetLast() *Node {
+	if n.next != nil {
+		return n.next.GetLast()
+	}
+	return n
+}
+
+func (n *Node) Count() int {
+	i := 0
+	for f := n.GetFirst(); f != nil; f = f.GetNext() {
+		i = i + 1
+	}
+	return i
+}
+
+//ROUTES
+func (n *Node) RangeInFixe() {
+	r := n.GetRoot()
+  CURNODE= nil
+	r.infixe()
+  fmt.Println(r.Count(),CURNODE.GetLabel())
+}
+
+func (n *Node) infixe() {
+
+	if n.left != nil {
+		n.left.infixe()
+	}
+  if(CURNODE!=nil){
+    fmt.Println(n.GetLabel(),CURNODE.GetLabel())
+    CURNODE.next=n
+    n.previous=CURNODE
+  }else{
+    fmt.Println(n.GetLabel(),"NIL")
+  }
+  CURNODE=n
+
+
+	if n.right != nil {
+		n.right.infixe()
+	}
+
+}
+
+func (n *Node) prefixe() {
+	fmt.Println(n.GetLabel())
+	if n.left != nil {
+		n.left.prefixe()
+	}
+
+	if n.right != nil {
+		n.right.prefixe()
+	}
+}
+
+func (n *Node) postfixe() {
+	if n.left != nil {
+		n.left.postfixe()
+	}
+	fmt.Println(n.GetLabel())
+	if n.right != nil {
+		n.right.postfixe()
+	}
+}
+
+// VERTICAL RANKING
+
+func (n *Node) SetLeft(node *Node) {
+	node.SetParent(n)
+	node.SetBP(n.bp + 1)
+	n.left = node
+}
+
+func (n *Node) SetRight(node *Node) {
+	node.SetParent(n)
+	node.SetBP(n.bp + 1)
+	n.right = node
+}
+
+func (n *Node) SetParent(node *Node) {
+	//  node.SetBP(n.bp+1)
+	n.parent = node
+}
+
+func (n *Node) GetRoot() *Node {
+	if n.parent != nil {
+		return n.parent.GetRoot()
+	}
+	return n
+}
+
+func (n *Node) GetLevel() int {
+	i := 0
+	for f := n.GetParent(); f != nil; f = f.GetParent() {
+		i = i + 1
+	}
+	return i
+}
+
+func (n *Node) GetLeft() *Node {
+	return n.left
+}
+
+func (n *Node) GetRight() *Node {
+	return n.right
+}
+
+func (n *Node) GetParent() *Node {
+	return n.parent
+}
+
+func (n *Node) CountLeft(i int) int {
+	if n.left != nil {
+		return n.left.CountLeft(i + 1)
+	}
+	return i
+}
+
+func (n *Node) CountRight(i int) int {
+
+	if n.right != nil {
+		return n.right.CountRight(i + 1)
+	}
+	return i
+}
+
+func (n *Node) countWidth(lev int, i int) int {
+
+	if lev == i {
+		t := 0
+		if n.left != nil {
+			t = t + 1
+		}
+		if n.right != nil {
+			t = t + 1
+		}
+		return t
+	}
+	if lev > i {
+		r := 0
+		l := 0
+		if n.left != nil {
+			l = n.left.countWidth(lev, i+1)
+		}
+		if n.right != nil {
+			r = n.right.countWidth(lev, i+1)
+		}
+
+		return r + l
+	}
+	return 0
+}
+
+func (n *Node) GetWidth() int {
+	w := 0
+	c := n.countWidth(0, 0)
+	for l := 0; c != 0; l = l + 1 {
+		if c > w {
+			w = c
+		}
+		c = n.countWidth(l, 0)
+	}
+	return w
+}
+func (n *Node) GetHeight() int {
+	r := 0
+	l := 0
+	if n.left != nil {
+		l = 1 + n.left.GetHeight()
+	}
+	if n.right != nil {
+		r = 1 + n.right.GetHeight()
+	}
+	if r > l {
+		return r
+	}
+	return l
+
+}

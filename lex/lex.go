@@ -1,141 +1,198 @@
 package lex
 
 import (
-  //"fmt"
-  "strconv"
+	"fmt"
+	"strconv"
 )
 
 type Lex struct {
-	toks   []Tok
-	input  []rune
-	pos    int
-	eof bool
-	cur    string
-	curd   string
-	curw   string
+	input []rune
+	pos   int
+	eof   bool
 }
 
 func NewLex(text string) *Lex {
-	l := &Lex{toks: []Tok{}, pos: 0, eof: false, cur: "", curd: "", curw: "", input: []rune(text)}
+	l := &Lex{pos: 0, eof: false, input: []rune(text)}
+	fmt.Println(len(text), len(l.input))
 	return l
 }
 
-func (l *Lex) addTok(t Tok) *Lex {
-	l.toks = append(l.toks, t)
-	l.clw()
-	return l
+func (l *Lex) GetCur() string {
+	if l.pos < len(l.input) {
+		return string(l.input[l.pos])
+	}
+	return ""
 }
 
-func (l *Lex) clw() *Lex {
-	l.curw = ""
-	return l
+func (l *Lex) GetPos() int {
+	return l.pos
 }
 
-func (l *Lex) read() *Lex {
+func (l *Lex) GetLen() int {
+	return len(l.input)
+}
 
-
-	if len(l.input) > l.pos+1 {
-		l.cur = string(l.input[l.pos])
-		l.curd = l.cur + string(l.input[l.pos+1])
+func (l *Lex) GetCurN(n int) string {
+	p := l.pos
+	r := ""
+	for i := p; i < n+p; i = i + 1 {
+		if i < len(l.input) {
+			r = r + string(l.input[i])
+		}
 	}
+	return r
+}
 
-	if len(l.input) == l.pos+1 {
-		l.cur = string(l.input[l.pos])
-		l.curd = ""
-	}
+func (l *Lex) Eof() bool {
+	return l.eof
+}
 
-	if len(l.input) == l.pos {
-		l.cur = ""
-		l.curd = ""
-	}
-
+func (l *Lex) Next() {
 	l.pos = l.pos + 1
-
-	return l
-}
-
-func (l *Lex) keep() *Lex {
-  l.curw = l.curw + l.cur
-  return l
-}
-
-func (l *Lex) checkEOF() *Lex {
-	if l.cur == "" {
-		l.addTok(Tok{t: EOF})
-    l.eof=true
+	if l.pos < len(l.input) {
+		l.eof = false
+	} else {
+		l.eof = true
 	}
-	return l
+
 }
 
-func (l *Lex) checkSpace() *Lex {
-	if IsBlank(l.cur) {
-    l.checkWord()
-    for l.read();IsBlank(l.cur);l.read(){}
-	}
-	return l
+func (l *Lex) Read() string {
+	r := l.GetCur()
+	l.Next()
+	return r
 }
 
-func (l *Lex) checkQuote() *Lex {
-	if l.cur == "\"" {
-    l.checkWord()
-    for l.read().clw();l.cur!="\""&&l.cur!="";l.read(){l.keep()}
-    l.addTok(Tok{t: STRING, lit: l.curw}).read()
-	}
-	return l
-}
-
-func (l *Lex) checkDouble() *Lex {
-	if l.curd != "" {
-		if value, exist := AllToks[l.curd]; exist {
-			return l.checkWord().addTok(value).read()
+//BLANK
+func (l *Lex) NextIsBlank() bool {
+	Blanks := []string{" ", "\t", "\r", "\n"}
+	for _, v := range Blanks {
+		if v == l.GetCur() {
+			return true
 		}
 	}
-	return l
+	return false
 }
 
-func (l *Lex) checkSimple() *Lex {
-	if l.cur != "" {
-    //fmt.Print (l.cur+" ")
-		if value, exist := AllToks[l.cur]; exist {
-      //fmt.Println (value)
-			return l.checkWord().addTok(value)
-		}
-    l.keep()
-    //fmt.Println ("...")
+func (l *Lex) EatBlank() {
+	if l.Eof() {
+		l.Next()
 	}
-	return l
+	if l.NextIsBlank() {
+		l.Next()
+		l.EatBlank()
+	}
 }
 
-func (l *Lex) checkWord() *Lex {
-  s:=l.curw
-  //check  int
-  _,err := strconv.Atoi(s)
-  if(err==nil){
-    return l.addTok(Tok{t:INT,lit:s})
-  }
-  //check  float
-  _,err = strconv.ParseFloat(s,64)
-  if(err==nil){
-    return l.addTok(Tok{t:FLOAT,lit:s})
-  }
-
-  if value, exist := AllToks[s]; exist {
-    return l.addTok(value)
-  }
-
-	if l.curw != "" && l.curw != " " {
-		return l.addTok(Tok{t: IDENT, lit: l.curw})
+//QUOTE
+func (l *Lex) NextIsQuote() bool {
+	if l.GetCur() == "\"" {
+		return true
 	}
-	return l
+	return false
 }
 
+func (l *Lex) ReadString(result string) string {
+	r := l.Read()
+	if r != "\"" {
+		return l.ReadString(result + r)
+	}
+	return result
+}
 
+func (l *Lex) GetString() Tok {
+	l.Next()
+	return Tok{t: STRING, lit: l.ReadString("")}
+}
 
-func (l *Lex) ReadToks() []Tok {
-	for l.read(); !l.eof ; l.read() {
-			l.checkEOF().checkSpace().checkQuote().checkDouble().checkSimple()
+//DOUBLE
+
+func (l *Lex) NextIsDouble() bool {
+	if _, exist := AllToks[l.GetCurN(2)]; exist {
+		return true
+	}
+	return false
+}
+
+func (l *Lex) GetDouble() Tok {
+	s := l.Read() + l.Read()
+	if v, exist := AllToks[s]; exist {
+		return v
+	}
+	return Tok{t: UNKNOWN, lit: s}
+}
+
+//DOUBLE
+
+func (l *Lex) NextIsSimple() bool {
+	if _, exist := AllToks[l.GetCur()]; exist {
+		return true
+	}
+	return false
+}
+
+func (l *Lex) GetSimple() Tok {
+	s := l.Read()
+	if v, exist := AllToks[s]; exist {
+		return v
+	}
+	return Tok{t: UNKNOWN, lit: s}
+}
+
+//LITERALS
+
+func (l *Lex) IsLimit() bool {
+	return l.Eof() || l.NextIsDouble() || l.NextIsSimple() || l.NextIsQuote() || l.NextIsBlank()
+}
+
+func (l *Lex) ReadLiteral(result string) string {
+	r := l.Read()
+	if !l.IsLimit() {
+		return l.ReadLiteral(result + r)
+	} else {
+		return result + r
 	}
 
-	return l.toks
+}
+func (l *Lex) GetLiteral() Tok {
+	s := l.ReadLiteral("")
+
+	_, err := strconv.Atoi(s)
+	if err == nil {
+		return Tok{t: INT, lit: s}
+	}
+	//check  float
+	_, err = strconv.ParseFloat(s, 64)
+	if err == nil {
+		return Tok{t: FLOAT, lit: s}
+	}
+
+	if value, exist := AllToks[s]; exist {
+		return value
+	}
+
+	return Tok{t: "IDENT", lit: s}
+
+}
+
+func (l *Lex) NextTok() Tok {
+	if l.Eof() {
+		return Tok{t: EOF}
+	}
+	if l.NextIsBlank() {
+		l.EatBlank()
+		return l.NextTok()
+	}
+	if l.NextIsQuote() {
+		return l.GetString()
+	}
+	if l.NextIsDouble() {
+		return l.GetDouble()
+	}
+	if l.NextIsSimple() {
+		return l.GetSimple()
+	}
+
+	return l.GetLiteral()
 
 }
